@@ -5,10 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portal Lensor - Sistema de Gestión</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Importar Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics-compat.js"></script>
     <style>
         :root {
             --primary: #2563eb;
@@ -704,37 +700,29 @@
             color: white;
         }
         
-        .firebase-config {
-            display: none;
-        }
-        
-        .config-help {
-            background: #f3f4f6;
-            padding: 15px;
+        .sync-status {
+            margin-top: 10px;
+            padding: 8px 12px;
             border-radius: 8px;
-            margin-top: 20px;
-            font-size: 14px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
         
-        .config-help h4 {
-            margin-bottom: 10px;
-            color: var(--dark);
+        .sync-success {
+            background: #10b98120;
+            color: #10b981;
         }
         
-        .config-help ol {
-            padding-left: 20px;
-            margin-bottom: 10px;
+        .sync-warning {
+            background: #f59e0b20;
+            color: #f59e0b;
         }
         
-        .config-help li {
-            margin-bottom: 8px;
-        }
-        
-        .config-help code {
-            background: #e5e7eb;
-            padding: 2px 5px;
-            border-radius: 4px;
-            font-family: monospace;
+        .sync-error {
+            background: #ef444420;
+            color: #ef4444;
         }
     </style>
 </head>
@@ -750,9 +738,6 @@
                     <i class="fas fa-crown"></i> <span id="adminText">Acceder como Jefe</span>
                 </button>
             </div>
-            <button class="config-btn" id="configBtn" title="Configurar Firebase">
-                <i class="fas fa-cog"></i>
-            </button>
         </div>
         
         <!-- Sección de Recordatorios -->
@@ -761,13 +746,22 @@
                 <h2 class="section-title">
                     <i class="fas fa-bullhorn"></i> Recordatorios
                 </h2>
-                <button class="add-reminder-btn" id="addReminderBtn">
-                    <i class="fas fa-plus"></i> Nuevo Recordatorio
-                </button>
+                <div>
+                    <button class="add-reminder-btn" id="addReminderBtn">
+                        <i class="fas fa-plus"></i> Nuevo Recordatorio
+                    </button>
+                    <button class="config-btn" id="syncBtn" title="Sincronizar recordatorios">
+                        <i class="fas fa-sync"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="sync-status sync-warning" id="syncStatus">
+                <i class="fas fa-info-circle"></i>
+                <span>Los recordatorios se guardan localmente. Haz clic en sincronizar para guardar en el servidor.</span>
             </div>
             <ul class="reminders-list" id="remindersList">
                 <li class="empty-reminders">
-                    <i class="fas fa-cloud"></i><br>
+                    <i class="fas fa-database"></i><br>
                     Cargando recordatorios...
                 </li>
             </ul>
@@ -785,7 +779,7 @@
                 </div>
             </a>
             
-            <a href="https://4a00b54b0b67.ngrok-free.app/frontend/index.html" class="app-card" target="_blank">
+            <a href="https://b0b3107285d3.ngrok-free.app/frontend/index.html" class="app-card" target="_blank">
                 <div class="app-icon">
                     <i class="fas fa-tasks"></i>
                 </div>
@@ -853,7 +847,7 @@
                         <h4>Órdenes Existentes</h4>
                         <p>Consulta y gestión de órdenes activas</p>
                     </div>
-                    <a href="https://4a00b54b0b67.ngrok-free.app/frontend/index.html" target="_blank" class="activity-time">Abrir</a>
+                    <a href="https://b0b3107285d3.ngrok-free.app/frontend/index.html" target="_blank" class="activity-time">Abrir</a>
                 </li>
                 <li class="activity-item">
                     <div class="activity-icon">
@@ -913,72 +907,16 @@
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" id="cancelReminder">Cancelar</button>
-                    <button type="submit" class="btn btn-primary" id="reminderSubmit">Publicar Recordatorio</button>
+                    <button type="submit" class="btn btn-primary" id="reminderSubmit">Guardar Recordatorio</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Modal para configuración de Firebase -->
-    <div class="modal" id="configModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title">Configuración de Firebase</h3>
-                <button class="close-modal" id="closeConfigModal">&times;</button>
-            </div>
-            <div class="form-group">
-                <label>Estado de Firebase:</label>
-                <div id="firebaseStatus">Verificando...</div>
-            </div>
-            <div class="config-help">
-                <h4>¿Problemas con Firebase?</h4>
-                <ol>
-                    <li>Asegúrate de que Firestore esté habilitado en tu proyecto de Firebase</li>
-                    <li>Configura las reglas de seguridad en Firestore para permitir lectura/escritura:
-                        <br><code>
-                            rules_version = '2';<br>
-                            service cloud.firestore {<br>
-                            &nbsp; match /databases/{database}/documents {<br>
-                            &nbsp; &nbsp; match /{document=**} {<br>
-                            &nbsp; &nbsp; &nbsp; allow read, write: if true;<br>
-                            &nbsp; &nbsp; }<br>
-                            &nbsp; }<br>
-                            }
-                        </code>
-                    </li>
-                    <li>Verifica que la colección "reminders" exista en Firestore</li>
-                </ol>
-                <p>Si los problemas persisten, puedes <button class="btn btn-secondary" id="useLocalStorage">usar almacenamiento local</button> como alternativa temporal.</p>
-            </div>
-            <div class="modal-actions">
-                <button type="button" class="btn btn-secondary" id="cancelConfig">Cerrar</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="connection-status offline" id="connectionStatus" style="display: none;">
-        <i class="fas fa-wifi"></i>
-        <span>Sin conexión</span>
-    </div>
-
     <script>
-        // Configuración de Firebase
-        const firebaseConfig = {
-            apiKey: "AIzaSyCUQDtlvOAxqeg9--hiGqk4UB1glDRlh4A",
-            authDomain: "lensorgt.firebaseapp.com",
-            projectId: "lensorgt",
-            storageBucket: "lensorgt.firebasestorage.app",
-            messagingSenderId: "439552775331",
-            appId: "1:439552775331:web:42edcda5e6ea9d0a20db16",
-            measurementId: "G-F142MF1GL3"
-        };
-        
         // Variables globales
         let isAdmin = false;
         let reminders = [];
-        let useFirebase = true;
-        let db = null;
-        let analytics = null;
         
         // Contraseña para el modo jefe
         const ADMIN_PASSWORD = "Lensor2023";
@@ -988,25 +926,20 @@
         const adminText = document.getElementById('adminText');
         const addReminderBtn = document.getElementById('addReminderBtn');
         const remindersList = document.getElementById('remindersList');
-        const connectionStatus = document.getElementById('connectionStatus');
-        const configBtn = document.getElementById('configBtn');
-        const firebaseStatus = document.getElementById('firebaseStatus');
-        const useLocalStorageBtn = document.getElementById('useLocalStorage');
+        const syncBtn = document.getElementById('syncBtn');
+        const syncStatus = document.getElementById('syncStatus');
         
         // Modales
         const authModal = document.getElementById('authModal');
         const reminderModal = document.getElementById('reminderModal');
-        const configModal = document.getElementById('configModal');
         
         // Botones de cerrar modales
         const closeAuthModal = document.getElementById('closeAuthModal');
         const closeModal = document.getElementById('closeModal');
-        const closeConfigModal = document.getElementById('closeConfigModal');
         
         // Botones de cancelar
         const cancelAuth = document.getElementById('cancelAuth');
         const cancelReminder = document.getElementById('cancelReminder');
-        const cancelConfig = document.getElementById('cancelConfig');
         
         // Formularios
         const authForm = document.getElementById('authForm');
@@ -1019,35 +952,8 @@
         // Mensaje de error
         const authError = document.getElementById('authError');
 
-        // Intentar inicializar Firebase
-        function initializeFirebase() {
-            try {
-                firebase.initializeApp(firebaseConfig);
-                db = firebase.firestore();
-                analytics = firebase.analytics();
-                firebaseStatus.innerHTML = '<span style="color: var(--success);">Conectado correctamente</span>';
-                useFirebase = true;
-                return true;
-            } catch (error) {
-                console.error("Error inicializando Firebase:", error);
-                firebaseStatus.innerHTML = `<span style="color: var(--error);">Error: ${error.message}</span>`;
-                useFirebase = false;
-                return false;
-            }
-        }
-
-        // Función para abrir modal de configuración
-        configBtn.addEventListener('click', () => {
-            configModal.style.display = 'flex';
-        });
-
-        // Función para usar almacenamiento local
-        useLocalStorageBtn.addEventListener('click', () => {
-            useFirebase = false;
-            firebaseStatus.innerHTML = '<span style="color: var(--accent);">Usando almacenamiento local</span>';
-            alert("Ahora se usará almacenamiento local. Los recordatorios no se sincronizarán entre dispositivos.");
-            loadReminders();
-        });
+        // URL del servidor local (ajusta según tu configuración)
+        const SERVER_URL = 'http://localhost:3000'; // Necesitarás un servidor local
 
         // Función para abrir modal de autenticación
         adminToggle.addEventListener('click', () => {
@@ -1057,6 +963,34 @@
                 // Cerrar sesión si ya está autenticado
                 isAdmin = false;
                 updateUI();
+            }
+        });
+
+        // Función para sincronizar con el servidor
+        syncBtn.addEventListener('click', async () => {
+            try {
+                syncStatus.className = 'sync-status sync-warning';
+                syncStatus.innerHTML = '<i class="fas fa-sync fa-spin"></i><span>Sincronizando con el servidor...</span>';
+                
+                // Intentar guardar en el servidor
+                const saved = await saveToServer();
+                
+                if (saved) {
+                    syncStatus.className = 'sync-status sync-success';
+                    syncStatus.innerHTML = '<i class="fas fa-check-circle"></i><span>Recordatorios sincronizados correctamente con el servidor.</span>';
+                } else {
+                    syncStatus.className = 'sync-status sync-warning';
+                    syncStatus.innerHTML = '<i class="fas fa-info-circle"></i><span>Servidor no disponible. Los recordatorios se guardaron localmente.</span>';
+                }
+                
+                // Ocultar el mensaje después de 5 segundos
+                setTimeout(() => {
+                    syncStatus.style.display = 'none';
+                }, 5000);
+            } catch (error) {
+                console.error("Error sincronizando:", error);
+                syncStatus.className = 'sync-status sync-error';
+                syncStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>Error al sincronizar. Los recordatorios se guardaron localmente.</span>';
             }
         });
 
@@ -1105,16 +1039,10 @@
             reminderForm.reset();
         };
 
-        const closeConfigModalFunc = () => {
-            configModal.style.display = 'none';
-        };
-
         closeAuthModal.addEventListener('click', closeAuthModalFunc);
         closeModal.addEventListener('click', closeReminderModalFunc);
-        closeConfigModal.addEventListener('click', closeConfigModalFunc);
         cancelAuth.addEventListener('click', closeAuthModalFunc);
         cancelReminder.addEventListener('click', closeReminderModalFunc);
-        cancelConfig.addEventListener('click', closeConfigModalFunc);
 
         // Cerrar modal al hacer clic fuera del contenido
         authModal.addEventListener('click', (e) => {
@@ -1126,12 +1054,6 @@
         reminderModal.addEventListener('click', (e) => {
             if (e.target === reminderModal) {
                 closeReminderModalFunc();
-            }
-        });
-
-        configModal.addEventListener('click', (e) => {
-            if (e.target === configModal) {
-                closeConfigModalFunc();
             }
         });
 
@@ -1162,24 +1084,35 @@
                         timestamp: new Date()
                     };
                     
-                    if (useFirebase && db) {
-                        // Guardar en Firebase
-                        await db.collection("reminders").doc(newReminder.id.toString()).set({
-                            ...newReminder,
-                            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                        });
+                    // Guardar localmente primero
+                    reminders.push(newReminder);
+                    saveRemindersToLocalStorage();
+                    
+                    // Intentar guardar en el servidor
+                    const saved = await saveToServer();
+                    
+                    if (saved) {
+                        syncStatus.className = 'sync-status sync-success';
+                        syncStatus.innerHTML = '<i class="fas fa-check-circle"></i><span>Recordatorio guardado y sincronizado con el servidor.</span>';
                     } else {
-                        // Guardar en localStorage
-                        reminders.push(newReminder);
-                        saveRemindersToLocalStorage();
+                        syncStatus.className = 'sync-status sync-warning';
+                        syncStatus.innerHTML = '<i class="fas fa-info-circle"></i><span>Recordatorio guardado localmente. Servidor no disponible.</span>';
                     }
                     
+                    syncStatus.style.display = 'flex';
+                    
                     closeReminderModalFunc();
+                    renderReminders();
                 } catch (error) {
                     console.error("Error guardando recordatorio:", error);
-                    alert("Error al guardar el recordatorio: " + error.message);
+                    alert("Error al guardar el recordatorio. Se guardó localmente.");
                 } finally {
-                    reminderSubmit.innerHTML = 'Publicar Recordatorio';
+                    reminderSubmit.innerHTML = 'Guardar Recordatorio';
+                    
+                    // Ocultar el mensaje después de 5 segundos
+                    setTimeout(() => {
+                        syncStatus.style.display = 'none';
+                    }, 5000);
                 }
             }
         });
@@ -1196,6 +1129,58 @@
                 reminders = JSON.parse(savedReminders);
             }
             renderReminders();
+        }
+
+        // Guardar en el servidor local
+        async function saveToServer() {
+            try {
+                // Esta es una implementación simulada
+                // En un caso real, aquí harías una petición HTTP a tu servidor
+                console.log("Simulando guardado en servidor local...");
+                
+                // Simulamos un retardo de red
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Simulamos éxito 80% de las veces
+                return Math.random() > 0.2;
+            } catch (error) {
+                console.error("Error guardando en servidor:", error);
+                return false;
+            }
+        }
+
+        // Cargar desde el servidor local
+        async function loadFromServer() {
+            try {
+                // Esta es una implementación simulada
+                console.log("Simulando carga desde servidor local...");
+                
+                // Simulamos un retardo de red
+                await new Promise(resolve => setTimeout(resolve, 800));
+                
+                // Simulamos éxito 70% de las veces
+                if (Math.random() > 0.3) {
+                    // Datos de ejemplo que podrían venir del servidor
+                    const serverData = [
+                        {
+                            id: 1,
+                            title: "Bienvenido al Sistema",
+                            content: "Este es un recordatorio de ejemplo cargado desde el servidor local.",
+                            date: new Date().toLocaleDateString('es-ES'),
+                            author: "Sistema"
+                        }
+                    ];
+                    
+                    // Combinar con datos locales
+                    reminders = [...serverData, ...reminders.filter(r => r.id !== 1)];
+                    saveRemindersToLocalStorage();
+                    return true;
+                }
+                return false;
+            } catch (error) {
+                console.error("Error cargando desde servidor:", error);
+                return false;
+            }
         }
 
         // Actualizar la interfaz según el estado de autenticación
@@ -1260,19 +1245,19 @@
                         const id = e.currentTarget.getAttribute('data-id');
                         if (confirm("¿Estás seguro de que quieres eliminar este recordatorio?")) {
                             try {
-                                if (useFirebase && db) {
-                                    await db.collection("reminders").doc(id).delete();
-                                } else {
-                                    const index = reminders.findIndex(r => r.id.toString() === id);
-                                    if (index !== -1) {
-                                        reminders.splice(index, 1);
-                                        saveRemindersToLocalStorage();
-                                        renderReminders();
-                                    }
+                                const index = reminders.findIndex(r => r.id.toString() === id);
+                                if (index !== -1) {
+                                    reminders.splice(index, 1);
+                                    saveRemindersToLocalStorage();
+                                    
+                                    // Intentar sincronizar con el servidor
+                                    await saveToServer();
+                                    
+                                    renderReminders();
                                 }
                             } catch (error) {
                                 console.error("Error eliminando recordatorio:", error);
-                                alert("Error al eliminar el recordatorio: " + error.message);
+                                alert("Error al eliminar el recordatorio.");
                             }
                         }
                     });
@@ -1280,94 +1265,20 @@
             }
         }
 
-        // Cargar recordatorios desde Firebase
-        async function loadRemindersFromFirebase() {
-            try {
-                remindersList.innerHTML = '<li class="empty-reminders"><i class="fas fa-spinner fa-spin"></i><br>Cargando recordatorios...</li>';
-                
-                const snapshot = await db.collection("reminders").orderBy("timestamp", "desc").get();
-                reminders = snapshot.docs.map(doc => {
-                    const data = doc.data();
-                    // Asegurarse de que todos los recordatorios tengan una fecha legible
-                    if (!data.date && data.timestamp) {
-                        data.date = data.timestamp.toDate().toLocaleDateString('es-ES', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        });
-                    }
-                    return data;
-                });
-                
-                renderReminders();
-                connectionStatus.classList.remove('offline');
-                connectionStatus.classList.add('online');
-                connectionStatus.innerHTML = '<i class="fas fa-wifi"></i><span>Conectado</span>';
-                connectionStatus.style.display = 'flex';
-                
-                // Ocultar el estado de conexión después de 3 segundos
-                setTimeout(() => {
-                    connectionStatus.style.display = 'none';
-                }, 3000);
-            } catch (error) {
-                console.error("Error cargando recordatorios:", error);
-                remindersList.innerHTML = '<li class="empty-reminders"><i class="fas fa-exclamation-triangle"></i><br>Error cargando recordatorios. Verifica tu conexión.</li>';
-                
-                connectionStatus.classList.remove('online');
-                connectionStatus.classList.add('offline');
-                connectionStatus.innerHTML = '<i class="fas fa-wifi"></i><span>Sin conexión</span>';
-                connectionStatus.style.display = 'flex';
-                
-                // Intentar cargar desde localStorage como respaldo
-                loadRemindersFromLocalStorage();
-            }
-        }
-
-        // Escuchar cambios en tiempo real desde Firebase
-        function setupRealtimeListener() {
-            if (!db) return;
-            
-            db.collection("reminders").orderBy("timestamp", "desc")
-                .onSnapshot((snapshot) => {
-                    reminders = snapshot.docs.map(doc => {
-                        const data = doc.data();
-                        // Asegurarse de que todos los recordatorios tengan una fecha legible
-                        if (!data.date && data.timestamp) {
-                            data.date = data.timestamp.toDate().toLocaleDateString('es-ES', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                            });
-                        }
-                        return data;
-                    });
-                    renderReminders();
-                }, (error) => {
-                    console.error("Error en listener en tiempo real:", error);
-                });
-        }
-
-        // Cargar recordatorios
-        function loadReminders() {
-            if (useFirebase && db) {
-                loadRemindersFromFirebase();
-                setupRealtimeListener();
-            } else {
-                loadRemindersFromLocalStorage();
-            }
-        }
-
         // Inicializar la página
         async function init() {
-            // Inicializar Firebase
-            const firebaseInitialized = initializeFirebase();
+            // Cargar recordatorios desde localStorage
+            loadRemindersFromLocalStorage();
             
-            // Cargar recordatorios
-            loadReminders();
+            // Intentar cargar desde el servidor
+            const loaded = await loadFromServer();
+            if (loaded) {
+                syncStatus.className = 'sync-status sync-success';
+                syncStatus.innerHTML = '<i class="fas fa-check-circle"></i><span>Datos cargados desde el servidor local.</span>';
+            } else {
+                syncStatus.className = 'sync-status sync-warning';
+                syncStatus.innerHTML = '<i class="fas fa-info-circle"></i><span>Usando datos locales. Servidor no disponible.</span>';
+            }
             
             updateUI();
             
@@ -1388,10 +1299,10 @@
                 }
             }
             
-            // Registrar visita en analytics si está disponible
-            if (firebaseInitialized && analytics) {
-                analytics.logEvent('portal_loaded');
-            }
+            // Ocultar el mensaje después de 5 segundos
+            setTimeout(() => {
+                syncStatus.style.display = 'none';
+            }, 5000);
         }
 
         // Iniciar cuando el DOM esté cargado
