@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portal Lensor - Sistema de Gestión</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Importar Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics-compat.js"></script>
     <style>
         :root {
             --primary: #2563eb;
@@ -334,6 +338,7 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
+            position: relative;
         }
         
         .modal-title {
@@ -347,6 +352,9 @@
             font-size: 24px;
             cursor: pointer;
             color: var(--gray);
+            position: absolute;
+            top: -10px;
+            right: -10px;
         }
         
         .form-group {
@@ -387,6 +395,7 @@
             cursor: pointer;
             font-size: 14px;
             font-weight: 500;
+            transition: all 0.3s;
         }
         
         .btn-primary {
@@ -394,9 +403,17 @@
             color: white;
         }
         
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+        
         .btn-secondary {
             background: #e5e7eb;
             color: var(--dark);
+        }
+        
+        .btn-secondary:hover {
+            background: #d1d5db;
         }
         
         .error-message {
@@ -404,6 +421,20 @@
             font-size: 14px;
             margin-top: 5px;
             display: none;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
         
         /* Recent Activity */
@@ -629,6 +660,34 @@
             color: var(--gray);
             font-style: italic;
         }
+        
+        .connection-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 100;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .online {
+            background: var(--success);
+            color: white;
+        }
+        
+        .offline {
+            background: var(--error);
+            color: white;
+        }
+        
+        .firebase-config {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -656,7 +715,10 @@
                 </button>
             </div>
             <ul class="reminders-list" id="remindersList">
-                <li class="empty-reminders">No hay recordatorios. Inicia sesión como jefe para agregar uno.</li>
+                <li class="empty-reminders">
+                    <i class="fas fa-cloud"></i><br>
+                    Cargando recordatorios...
+                </li>
             </ul>
         </div>
         
@@ -776,7 +838,7 @@
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" id="cancelAuth">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Acceder</button>
+                    <button type="submit" class="btn btn-primary" id="authSubmit">Acceder</button>
                 </div>
             </form>
         </div>
@@ -800,18 +862,39 @@
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" id="cancelReminder">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Publicar Recordatorio</button>
+                    <button type="submit" class="btn btn-primary" id="reminderSubmit">Publicar Recordatorio</button>
                 </div>
             </form>
         </div>
     </div>
 
+    <div class="connection-status offline" id="connectionStatus" style="display: none;">
+        <i class="fas fa-wifi"></i>
+        <span>Sin conexión</span>
+    </div>
+
     <script>
+        // Configuración de Firebase (usando los datos que proporcionaste)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCUQDtlvOAxqeg9--hiGqk4UB1glDRlh4A",
+            authDomain: "lensorgt.firebaseapp.com",
+            projectId: "lensorgt",
+            storageBucket: "lensorgt.firebasestorage.app",
+            messagingSenderId: "439552775331",
+            appId: "1:439552775331:web:42edcda5e6ea9d0a20db16",
+            measurementId: "G-F142MF1GL3"
+        };
+        
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const analytics = firebase.analytics();
+        
         // Variables globales
         let isAdmin = false;
-        const reminders = JSON.parse(localStorage.getItem('lensor_reminders')) || [];
+        let reminders = [];
         
-        // Contraseña para el modo jefe (puedes cambiarla por una más segura)
+        // Contraseña para el modo jefe
         const ADMIN_PASSWORD = "Lensor2023";
 
         // Elementos del DOM
@@ -819,6 +902,7 @@
         const adminText = document.getElementById('adminText');
         const addReminderBtn = document.getElementById('addReminderBtn');
         const remindersList = document.getElementById('remindersList');
+        const connectionStatus = document.getElementById('connectionStatus');
         
         // Modales
         const authModal = document.getElementById('authModal');
@@ -836,6 +920,10 @@
         const authForm = document.getElementById('authForm');
         const reminderForm = document.getElementById('reminderForm');
         
+        // Botones de submit
+        const authSubmit = document.getElementById('authSubmit');
+        const reminderSubmit = document.getElementById('reminderSubmit');
+        
         // Mensaje de error
         const authError = document.getElementById('authError');
 
@@ -851,17 +939,28 @@
         });
 
         // Función para autenticar
-        authForm.addEventListener('submit', (e) => {
+        authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const password = document.getElementById('adminPassword').value;
             
             if (password === ADMIN_PASSWORD) {
-                isAdmin = true;
-                authModal.style.display = 'none';
-                authForm.reset();
-                authError.style.display = 'none';
-                updateUI();
+                // Mostrar loading
+                authSubmit.innerHTML = '<div class="loading"></div>';
+                
+                try {
+                    isAdmin = true;
+                    authModal.style.display = 'none';
+                    authForm.reset();
+                    authError.style.display = 'none';
+                    updateUI();
+                } catch (error) {
+                    console.error("Error autenticando:", error);
+                    authError.textContent = "Error de conexión. Intenta nuevamente.";
+                    authError.style.display = 'block';
+                } finally {
+                    authSubmit.innerHTML = 'Acceder';
+                }
             } else {
                 authError.style.display = 'block';
             }
@@ -903,38 +1002,44 @@
         });
 
         // Agregar nuevo recordatorio
-        reminderForm.addEventListener('submit', (e) => {
+        reminderForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const title = document.getElementById('reminderTitle').value;
             const content = document.getElementById('reminderContent').value;
             
             if (title && content) {
-                const newReminder = {
-                    id: Date.now(),
-                    title,
-                    content,
-                    date: new Date().toLocaleDateString('es-ES', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    }),
-                    author: 'Jefe'
-                };
+                // Mostrar loading
+                reminderSubmit.innerHTML = '<div class="loading"></div>';
                 
-                reminders.unshift(newReminder);
-                saveReminders();
-                renderReminders();
-                closeReminderModalFunc();
+                try {
+                    const newReminder = {
+                        id: Date.now(),
+                        title,
+                        content,
+                        date: new Date().toLocaleDateString('es-ES', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        }),
+                        author: 'Jefe',
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+                    
+                    // Guardar en Firebase
+                    await db.collection("reminders").doc(newReminder.id.toString()).set(newReminder);
+                    
+                    closeReminderModalFunc();
+                } catch (error) {
+                    console.error("Error guardando recordatorio:", error);
+                    alert("Error al guardar el recordatorio. Intenta nuevamente.");
+                } finally {
+                    reminderSubmit.innerHTML = 'Publicar Recordatorio';
+                }
             }
         });
-
-        // Guardar recordatorios en localStorage
-        function saveReminders() {
-            localStorage.setItem('lensor_reminders', JSON.stringify(reminders));
-        }
 
         // Actualizar la interfaz según el estado de autenticación
         function updateUI() {
@@ -962,8 +1067,11 @@
                 return;
             }
             
+            // Ordenar recordatorios por fecha (más recientes primero)
+            const sortedReminders = [...reminders].sort((a, b) => b.id - a.id);
+            
             // Mostrar recordatorios
-            reminders.forEach(reminder => {
+            sortedReminders.forEach(reminder => {
                 const reminderItem = document.createElement('li');
                 reminderItem.className = 'reminder-item';
                 reminderItem.innerHTML = `
@@ -991,26 +1099,69 @@
             // Agregar event listeners para eliminar recordatorios
             if (isAdmin) {
                 document.querySelectorAll('.delete-reminder').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        const id = parseInt(e.currentTarget.getAttribute('data-id'));
-                        deleteReminder(id);
+                    button.addEventListener('click', async (e) => {
+                        const id = e.currentTarget.getAttribute('data-id');
+                        if (confirm("¿Estás seguro de que quieres eliminar este recordatorio?")) {
+                            try {
+                                await db.collection("reminders").doc(id).delete();
+                            } catch (error) {
+                                console.error("Error eliminando recordatorio:", error);
+                                alert("Error al eliminar el recordatorio.");
+                            }
+                        }
                     });
                 });
             }
         }
 
-        // Eliminar recordatorio
-        function deleteReminder(id) {
-            const index = reminders.findIndex(reminder => reminder.id === id);
-            if (index !== -1) {
-                reminders.splice(index, 1);
-                saveReminders();
+        // Cargar recordatorios desde Firebase
+        async function loadReminders() {
+            try {
+                remindersList.innerHTML = '<li class="empty-reminders"><i class="fas fa-spinner fa-spin"></i><br>Cargando recordatorios...</li>';
+                
+                const snapshot = await db.collection("reminders").orderBy("timestamp", "desc").get();
+                reminders = snapshot.docs.map(doc => doc.data());
+                
                 renderReminders();
+                connectionStatus.classList.remove('offline');
+                connectionStatus.classList.add('online');
+                connectionStatus.innerHTML = '<i class="fas fa-wifi"></i><span>Conectado</span>';
+                connectionStatus.style.display = 'flex';
+                
+                // Ocultar el estado de conexión después de 3 segundos
+                setTimeout(() => {
+                    connectionStatus.style.display = 'none';
+                }, 3000);
+            } catch (error) {
+                console.error("Error cargando recordatorios:", error);
+                remindersList.innerHTML = '<li class="empty-reminders"><i class="fas fa-exclamation-triangle"></i><br>Error cargando recordatorios. Verifica tu conexión.</li>';
+                
+                connectionStatus.classList.remove('online');
+                connectionStatus.classList.add('offline');
+                connectionStatus.innerHTML = '<i class="fas fa-wifi"></i><span>Sin conexión</span>';
+                connectionStatus.style.display = 'flex';
             }
         }
 
+        // Escuchar cambios en tiempo real
+        function setupRealtimeListener() {
+            db.collection("reminders").orderBy("timestamp", "desc")
+                .onSnapshot((snapshot) => {
+                    reminders = snapshot.docs.map(doc => doc.data());
+                    renderReminders();
+                }, (error) => {
+                    console.error("Error en listener en tiempo real:", error);
+                });
+        }
+
         // Inicializar la página
-        function init() {
+        async function init() {
+            // Primero intentar cargar los recordatorios
+            await loadReminders();
+            
+            // Configurar listener en tiempo real
+            setupRealtimeListener();
+            
             updateUI();
             
             // Verificar estado de enlaces
@@ -1029,6 +1180,9 @@
                     statusElement.className = "link-status status-ok";
                 }
             }
+            
+            // Registrar visita en analytics
+            analytics.logEvent('portal_loaded');
         }
 
         // Iniciar cuando el DOM esté cargado
