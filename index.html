@@ -194,6 +194,11 @@
             box-shadow: 0 6px 20px rgba(236, 72, 153, 0.3);
         }
         
+        .app-card:nth-child(6) .app-icon {
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            box-shadow: 0 6px 20px rgba(6, 182, 212, 0.3);
+        }
+        
         .app-card h3 {
             font-size: 20px;
             margin-bottom: 12px;
@@ -482,6 +487,18 @@
                         <span class="link-status status-ok">Enlace verificado</span>
                     </div>
                 </a>
+                
+                <!-- Nuevo botón agregado -->
+                <a href="https://careless-ivonne-nonpractically.ngrok-free.dev" class="app-card" target="_blank">
+                    <div class="app-icon">
+                        <i class="fas fa-cogs"></i>
+                    </div>
+                    <div class="app-content">
+                        <h3>Panel de Control</h3>
+                        <p>Gestión avanzada y configuración del sistema</p>
+                        <span class="link-status status-warning">Servidor temporal</span>
+                    </div>
+                </a>
             </div>
         </div>
         
@@ -528,6 +545,17 @@
                         <p>Ver reportes de ventas</p>
                     </div>
                 </a>
+                
+                <!-- Nuevo acceso rápido agregado -->
+                <a href="https://careless-ivonne-nonpractically.ngrok-free.dev" class="action-item" target="_blank">
+                    <div class="action-icon">
+                        <i class="fas fa-sliders-h"></i>
+                    </div>
+                    <div class="action-content">
+                        <h4>Panel de Control</h4>
+                        <p>Configuración del sistema</p>
+                    </div>
+                </a>
             </div>
         </div>
         
@@ -565,7 +593,7 @@
                     const statusElement = statusElements[i];
                     
                     // Simular verificación (en un caso real harías una petición HEAD)
-                    if (link.href.includes('ngrok-free.app')) {
+                    if (link.href.includes('ngrok-free.app') || link.href.includes('ngrok-free.dev')) {
                         statusElement.textContent = "Servidor temporal";
                         statusElement.className = "link-status status-warning";
                     } else {
@@ -591,5 +619,4 @@
         });
     </script>
 </body>
-
 </html>
