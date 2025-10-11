@@ -14,6 +14,7 @@
             --dark: #1f2937;
             --success: #10b981;
             --gray: #6b7280;
+            --bi-blue: #1a237e; /* Azul marino similar al Banco Industrial */
         }
         
         * {
@@ -163,6 +164,7 @@
             font-size: 32px;
             color: white;
             transition: transform 0.3s ease;
+            font-weight: bold;
         }
         
         .app-card:hover .app-icon {
@@ -195,8 +197,8 @@
         }
         
         .app-card:nth-child(6) .app-icon {
-            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
-            box-shadow: 0 6px 20px rgba(6, 182, 212, 0.3);
+            background: linear-gradient(135deg, var(--bi-blue) 0%, #0d1b5e 100%);
+            box-shadow: 0 6px 20px rgba(26, 35, 126, 0.4);
         }
         
         .app-card h3 {
@@ -283,6 +285,7 @@
             background: white;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
+            font-weight: bold;
         }
         
         .action-content h4 {
@@ -488,14 +491,14 @@
                     </div>
                 </a>
                 
-                <!-- Nuevo botón agregado -->
+                <!-- Nuevo botón Agente BI -->
                 <a href="https://careless-ivonne-nonpractically.ngrok-free.dev" class="app-card" target="_blank">
                     <div class="app-icon">
-                        <i class="fas fa-cogs"></i>
+                        BI
                     </div>
                     <div class="app-content">
-                        <h3>Panel de Control</h3>
-                        <p>Gestión avanzada y configuración del sistema</p>
+                        <h3>Agente BI</h3>
+                        <p>Inteligencia de negocios y análisis de datos</p>
                         <span class="link-status status-warning">Servidor temporal</span>
                     </div>
                 </a>
@@ -546,14 +549,14 @@
                     </div>
                 </a>
                 
-                <!-- Nuevo acceso rápido agregado -->
+                <!-- Nuevo acceso rápido Agente BI -->
                 <a href="https://careless-ivonne-nonpractically.ngrok-free.dev" class="action-item" target="_blank">
-                    <div class="action-icon">
-                        <i class="fas fa-sliders-h"></i>
+                    <div class="action-icon" style="background-color: var(--bi-blue); color: white;">
+                        BI
                     </div>
                     <div class="action-content">
-                        <h4>Panel de Control</h4>
-                        <p>Configuración del sistema</p>
+                        <h4>Agente BI</h4>
+                        <p>Análisis de datos</p>
                     </div>
                 </a>
             </div>
